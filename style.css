@@ -45,7 +45,6 @@ h1 {
 }
 .Analytic-Container > div {
   margin: 10px;
-
 }
 .Chart-Container {
   display: flex;
@@ -136,7 +135,6 @@ h1 {
   display: none;
 }
 
- 
 .option-row {
   display: flex;
   align-items: center;
@@ -157,7 +155,6 @@ h1 {
   min-width: 0;
 }
 
- 
 .seg-ctrl {
   display: flex;
   background: rgba(255, 255, 255, 0.07);
@@ -189,7 +186,7 @@ h1 {
   color: #c4b5fd;
   border-color: rgba(167, 139, 250, 0.45);
 }
- 
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -244,7 +241,6 @@ h1 {
   background: #a78bfa;
 }
 
- 
 .grid4 {
   display: flex;
   flex-wrap: wrap;
@@ -261,7 +257,6 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-
 
 .metric {
   background: rgba(255, 255, 255, 0.06);
@@ -284,7 +279,6 @@ h1 {
   color: rgba(255, 255, 255, 0.3);
   margin-top: 3px;
 }
-
 
 .pnl-card {
   background: rgba(255, 255, 255, 0.06);
@@ -342,7 +336,6 @@ h1 {
   color: #c4b5fd;
 }
 
-
 .bar-label {
   display: flex;
   justify-content: space-between;
@@ -362,8 +355,6 @@ h1 {
   border-radius: 4px;
   transition: width 0.35s ease;
 }
-
-
 
 .streak-grid {
   display: flex;
@@ -421,7 +412,6 @@ h1 {
   color: #6ee7b7;
 }
 
-
 .alert-box {
   border-radius: 12px;
   padding: 10px 14px;
@@ -453,7 +443,6 @@ h1 {
   margin-top: 12px;
 }
 
-
 .path-meta {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.35);
@@ -478,7 +467,6 @@ h1 {
   font-weight: 500;
 }
 
-
 .legend-row {
   display: flex;
   gap: 18px;
@@ -494,6 +482,47 @@ h1 {
   display: inline-block;
   margin-right: 5px;
   vertical-align: middle;
+}
+
+.chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.chart-header .section-title {
+  margin-bottom: 4px;
+}
+
+.reroll-btn {
+  flex-shrink: 0;
+  background: rgba(167, 139, 250, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.reroll-btn:hover {
+  background: rgba(167, 139, 250, 0.28);
+  border-color: rgba(167, 139, 250, 0.6);
+}
+
+.reroll-btn:active {
+  transform: scale(0.97);
+}
+
+.reroll-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .streak-note {

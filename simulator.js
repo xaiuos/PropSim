@@ -151,46 +151,6 @@ function collectPaths(
   return { passPaths, bustPaths, passFloors, bustFloors };
 }
 
-function averagePath(paths) {
-  if (!paths.length) return [];
-
-  const threshold = Math.max(1, paths.length * 0.1);
-  const maxLen = Math.max(...paths.map((p) => p.length));
-  const result = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    let sum = 0;
-    let count = 0;
-    paths.forEach((p) => {
-      if (i < p.length) {
-        sum += p[i];
-        count++;
-      }
-    });
-    if (count < threshold) break;
-    result.push(Math.round(sum / count));
-  }
-
-  return result;
-}
-
-function averageFloorPath(floors, length) {
-  const result = [];
-  for (let i = 0; i < length; i++) {
-    let sum = 0;
-    let count = 0;
-    floors.forEach((f) => {
-      if (i < f.length) {
-        sum += f[i];
-        count++;
-      }
-    });
-    if (count === 0) break;
-    result.push(Math.round(sum / count));
-  }
-  return result;
-}
-
 function pathStats(paths) {
   if (!paths.length) return { count: 0, avg: 0, min: 0, max: 0 };
 
@@ -201,6 +161,14 @@ function pathStats(paths) {
     avg: Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length),
     min: Math.min(...lengths),
     max: Math.max(...lengths),
+  };
+}
+
+function singlePathStats(path) {
+  return {
+    trades: path.length - 1,
+    peak: Math.max(...path),
+    final: path[path.length - 1],
   };
 }
 
@@ -273,7 +241,7 @@ function update() {
   const winDisplay = fixedRisk ? fixedRiskAmt * rr : acct * risk * rr;
 
   const ev = wr * winDisplay - (1 - wr) * lossDisplay;
-  const wrBreakeven = 1 / (1 + rr); //
+  const wrBreakeven = 1 / (1 + rr);
 
   const target = (acct * pt) / 100;
   const ddAmount = (acct * dd) / 100;
@@ -626,6 +594,13 @@ function update() {
   }, 400);
 }
 
+let storedPassPaths = [];
+let storedBustPaths = [];
+let storedPassFloors = [];
+let storedBustFloors = [];
+let storedUpper = 0;
+let storedFloor0 = 0;
+
 function updatePathCharts(
   acct,
   pt,
@@ -661,94 +636,93 @@ function updatePathCharts(
     300
   );
 
-  const upper = acct * (1 + pt / 100);
-  const floor0 = acct * (1 - dd / 100);
-
-  const passAvg = averagePath(passPaths);
-  const passStats = pathStats(passPaths);
-  const passFloorAvg = averageFloorPath(passFloors, passAvg.length);
+  storedPassPaths = passPaths;
+  storedBustPaths = bustPaths;
+  storedPassFloors = passFloors;
+  storedBustFloors = bustFloors;
+  storedUpper = acct * (1 + pt / 100);
+  storedFloor0 = acct * (1 - dd / 100);
 
   document.getElementById("pass-path-meta").textContent = passPaths.length
-    ? "Based on " + passPaths.length + " passing simulations"
-    : "No passing simulations collected — pass rate may be very low";
+    ? passPaths.length + " passing accounts sampled — showing 1 random"
+    : "No passing accounts — pass rate may be very low";
 
-  renderStatCards(
-    "pass-path-stats",
-    passStats,
-    [
-      { label: "Avg trades to pass", val: passStats.avg },
-      { label: "Fastest pass", val: passStats.min + " trades" },
-      { label: "Slowest pass", val: passStats.max + " trades" },
-    ],
-    "#6ee7b7"
-  );
+  document.getElementById("fail-path-meta").textContent = bustPaths.length
+    ? bustPaths.length + " failing accounts sampled — showing 1 random"
+    : "No failing accounts — bust rate may be very low";
 
-  buildPathChart(
+  const passBtn = document.getElementById("pass-reroll-btn");
+  const failBtn = document.getElementById("fail-reroll-btn");
+  passBtn.disabled = passPaths.length === 0;
+  failBtn.disabled = bustPaths.length === 0;
+
+  drawRandomPassPath();
+  drawRandomBustPath();
+}
+
+function drawRandomPassPath() {
+  if (!storedPassPaths.length) return;
+  const idx = Math.floor(Math.random() * storedPassPaths.length);
+  const path = storedPassPaths[idx];
+  const floor = storedPassFloors[idx];
+  drawSinglePath(
     "passPathChart",
     passPathChart,
-    {
-      avgEquity: passAvg,
-      avgFloor: passFloorAvg,
-      upper,
-      startFloor: floor0,
-      lineColor: "#6ee7b7",
-      eodTrailing,
-    },
+    path,
+    floor,
+    storedUpper,
+    storedFloor0,
+    "#6ee7b7",
     (chart) => {
       passPathChart = chart;
     }
   );
+  renderSinglePathStats("pass-path-stats", path, storedUpper, "#6ee7b7");
+}
 
-  const bustAvg = averagePath(bustPaths);
-  const bustStats = pathStats(bustPaths);
-  const bustFloorAvg = averageFloorPath(bustFloors, bustAvg.length);
-
-  document.getElementById("fail-path-meta").textContent = bustPaths.length
-    ? "Based on " + bustPaths.length + " failing simulations"
-    : "No failing simulations collected — bust rate may be very low";
-
-  renderStatCards(
-    "fail-path-stats",
-    bustStats,
-    [
-      { label: "Avg trades to bust", val: bustStats.avg },
-      { label: "Fastest bust", val: bustStats.min + " trades" },
-      { label: "Slowest bust", val: bustStats.max + " trades" },
-    ],
-    "#fca5a5"
-  );
-
-  buildPathChart(
+function drawRandomBustPath() {
+  if (!storedBustPaths.length) return;
+  const idx = Math.floor(Math.random() * storedBustPaths.length);
+  const path = storedBustPaths[idx];
+  const floor = storedBustFloors[idx];
+  drawSinglePath(
     "failPathChart",
     failPathChart,
-    {
-      avgEquity: bustAvg,
-      avgFloor: bustFloorAvg,
-      upper,
-      startFloor: floor0,
-      lineColor: "#fca5a5",
-      eodTrailing,
-    },
+    path,
+    floor,
+    storedUpper,
+    storedFloor0,
+    "#fca5a5",
     (chart) => {
       failPathChart = chart;
     }
   );
+  renderSinglePathStats("fail-path-stats", path, storedUpper, "#fca5a5");
 }
 
-function buildPathChart(canvasId, existingChart, opts, onCreated) {
+function drawSinglePath(
+  canvasId,
+  existingChart,
+  path,
+  floorPath,
+  upper,
+  floor0,
+  lineColor,
+  onCreated
+) {
   if (existingChart) existingChart.destroy();
-  if (!opts.avgEquity.length) {
+  if (!path || !path.length) {
     onCreated(null);
     return;
   }
 
-  const n = opts.avgEquity.length;
+  const n = path.length;
   const labels = Array.from({ length: n }, (_, i) => i);
-  const targetLine = Array(n).fill(Math.round(opts.upper));
+  const targetLine = Array(n).fill(Math.round(upper));
   const floorLine =
-    opts.avgFloor.length === n
-      ? opts.avgFloor
-      : Array(n).fill(Math.round(opts.startFloor));
+    floorPath && floorPath.length === n
+      ? floorPath
+      : Array(n).fill(Math.round(floor0));
 
   const chart = new Chart(document.getElementById(canvasId), {
     type: "line",
@@ -756,14 +730,14 @@ function buildPathChart(canvasId, existingChart, opts, onCreated) {
       labels,
       datasets: [
         {
-          label: "Avg equity",
-          data: opts.avgEquity,
-          borderColor: opts.lineColor,
-          backgroundColor: opts.lineColor + "15",
-          borderWidth: 2.5,
+          label: "Equity",
+          data: path,
+          borderColor: lineColor,
+          backgroundColor: lineColor + "12",
+          borderWidth: 1.5,
           pointRadius: 0,
           fill: false,
-          tension: 0.3,
+          tension: 0,
         },
         {
           label: "Profit target",
@@ -812,7 +786,7 @@ function buildPathChart(canvasId, existingChart, opts, onCreated) {
       scales: {
         y: {
           ticks: {
-            callback: (v) => "$" + (v / 1000).toFixed(0) + "K",
+            callback: (v) => "$" + (v / 1000).toFixed(1) + "K",
             font: { size: 11 },
             color: "rgba(255,255,255,0.35)",
           },
@@ -842,12 +816,28 @@ function buildPathChart(canvasId, existingChart, opts, onCreated) {
   onCreated(chart);
 }
 
-function renderStatCards(containerId, stats, items, color) {
+function renderSinglePathStats(containerId, path, upper, color) {
   const el = document.getElementById(containerId);
-  if (!stats.count) {
+  if (!path || !path.length) {
     el.innerHTML = "";
     return;
   }
+
+  const stats = singlePathStats(path);
+  const passed = path[path.length - 1] >= upper;
+
+  const items = [
+    { label: "Trades taken", val: stats.trades },
+    {
+      label: "Peak equity",
+      val: "$" + Math.round(stats.peak).toLocaleString(),
+    },
+    {
+      label: passed ? "Final equity (passed)" : "Final equity (busted)",
+      val: "$" + Math.round(stats.final).toLocaleString(),
+    },
+  ];
+
   el.innerHTML = items
     .map(
       (it) =>
@@ -1060,6 +1050,13 @@ function bindSlider(id, outId, fmt) {
     update();
   });
 }
+
+document
+  .getElementById("pass-reroll-btn")
+  .addEventListener("click", drawRandomPassPath);
+document
+  .getElementById("fail-reroll-btn")
+  .addEventListener("click", drawRandomBustPath);
 
 bindSlider("acct", "acct-out", (v) => "$" + Number(v).toLocaleString());
 bindSlider("pt", "pt-out", (v) => v + "%");
