@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PropFirm Simulator</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="images/png" href="logo.png" />
+  </head>
+  <body>
+    <div class="container">
+ 
+      <!-- ── account setup ── -->
+      <div class="Setup-Container">
+        <div class="glass">
+          <div class="section-title">Account setup</div>
+          <div class="slider-row">
+            <label>Account size ($)</label>
+            <input
+              type="range"
+              id="acct"
+              min="10000"
+              max="150000"
+              step="5000"
+              value="25000"
+            />
+            <span class="val" id="acct-out">$25,000</span>
+          </div>
+          <div class="slider-row">
+            <label>Profit target (%)</label>
+            <input type="range" id="pt" min="4" max="15" step="1" value="5" />
+            <span class="val" id="pt-out">5%</span>
+          </div>
+          <div class="slider-row">
+            <label>Max drawdown (%)</label>
+            <input type="range" id="dd" min="3" max="12" step="1" value="4" />
+            <span class="val" id="dd-out">4%</span>
+          </div>
+          <div class="option-row">
+            <span class="option-label">Drawdown type</span>
+            <div class="seg-ctrl" id="dd-type">
+              <button class="seg-btn active" data-val="static">Static</button>
+              <button class="seg-btn" data-val="eod">EOD trailing</button>
+            </div>
+            <span class="option-hint" id="dd-type-hint"
+              >Floor fixed from starting balance — never moves</span
+            >
+          </div>
+        </div>
+
+        <!-- ── Strategy ── -->
+        <div class="glass">
+          <div class="section-title">Strategy — precise controls</div>
+          <div class="slider-row">
+            <label>Win rate (%)</label>
+            <input
+              type="range"
+              id="wr"
+              min="20"
+              max="85"
+              step="0.001"
+              value="60"
+            />
+            <span class="val" id="wr-out">60.000%</span>
+          </div>
+          <div class="slider-row">
+            <label>RR ratio (TP ÷ SL)</label>
+            <input
+              type="range"
+              id="rr"
+              min="0.1"
+              max="5"
+              step="0.001"
+              value="0.666"
+            />
+            <span class="val" id="rr-out">0.666</span>
+          </div>
+          <div class="option-row">
+            <span class="option-label">Risk mode</span>
+            <div class="seg-ctrl" id="risk-mode">
+              <button class="seg-btn active" data-val="pct">% compound</button>
+              <button class="seg-btn" data-val="fixed">Fixed $</button>
+            </div>
+            <span class="option-hint" id="risk-mode-hint"
+              >Risk scales with current equity each trade</span
+            >
+          </div>
+          <div class="slider-row" id="risk-pct-row">
+            <label>Risk per trade (%)</label>
+            <input
+              type="range"
+              id="risk"
+              min="0.1"
+              max="5"
+              step="0.001"
+              value="0.800"
+            />
+            <span class="val" id="risk-out">0.800%</span>
+          </div>
+          <div class="slider-row hidden" id="risk-fixed-row">
+            <label>Risk per trade ($)</label>
+            <input
+              type="range"
+              id="risk-fixed"
+              min="50"
+              max="5000"
+              step="50"
+              value="200"
+            />
+            <span class="val" id="risk-fixed-out">$200</span>
+          </div>
+          <div class="slider-row">
+            <label>Trades per day</label>
+            <input type="range" id="tpd" min="1" max="20" step="1" value="3" />
+            <span class="val" id="tpd-out">3</span>
+          </div>
+
+          <!-- Daily loss limit -->
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="daily-toggle" />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+            <span>Daily loss limit</span>
+            <span class="toggle-status color-red" id="daily-status">OFF</span>
+          </div>
+          <div class="slider-row disabled" id="daily-row">
+            <label>Max daily loss ($)</label>
+            <input
+              type="range"
+              id="daily-limit"
+              min="100"
+              max="3000"
+              step="50"
+              value="1000"
+            />
+            <span class="val" id="daily-limit-out">$1,000</span>
+          </div>
+
+          <!-- Days limit -->
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="days-toggle" checked />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+            <span>Max trading days limit</span>
+            <span class="toggle-status color-purple" id="days-status">ON</span>
+          </div>
+          <div class="slider-row" id="days-row">
+            <label>Max trading days</label>
+            <input
+              type="range"
+              id="days"
+              min="5"
+              max="60"
+              step="1"
+              value="30"
+            />
+            <span class="val" id="days-out">30</span>
+          </div>
+        </div>
+      </div>
+      <div class="Analytic-Container">
+        <!-- ── Dollar P&L per trade ── -->
+        <div class="glass">
+          <div class="section-title">Dollar P&L per single trade</div>
+          <div class="grid2" style="margin-bottom: 16px">
+            <div class="pnl-card">
+              <div class="pnl-label">If you WIN this trade</div>
+              <div class="pnl-big color-green" id="win-dollar">—</div>
+              <div class="pnl-sub" id="win-sub">—</div>
+              <div class="tag tag-green" id="win-tag">—</div>
+            </div>
+            <div class="pnl-card">
+              <div class="pnl-label">If you LOSE this trade</div>
+              <div class="pnl-big color-red" id="loss-dollar">—</div>
+              <div class="pnl-sub" id="loss-sub">—</div>
+              <div class="tag tag-red" id="loss-tag">—</div>
+            </div>
+          </div>
+          <div class="grid4">
+            <div class="metric">
+              <div class="mlabel">EV per trade</div>
+              <div class="mval" id="ev-val">—</div>
+              <div class="msub">expected $</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Profit target $</div>
+              <div class="mval color-blue" id="target-dollar">—</div>
+              <div class="msub" id="target-trades">—</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Max drawdown $</div>
+              <div class="mval color-red" id="dd-dollar">—</div>
+              <div class="msub" id="dd-trades">—</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Pass probability</div>
+              <div class="mval" id="pass-pct">—</div>
+              <div class="msub" id="pass-msub">3000 MC paths</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Challenge economics ── -->
+        <div class="glass Challenge">
+          <div class="section-title">Challenge economics</div>
+          <div class="slider-row">
+            <label>Challenge fee ($)</label>
+            <input
+              type="range"
+              id="challenge-fee"
+              min="0"
+              max="600"
+              step="1"
+              value="60"
+            />
+            <span class="val" id="challenge-fee-out">$60</span>
+          </div>
+          <div class="grid4" style="margin-bottom: 14px">
+            <div class="metric">
+              <div class="mlabel">Kelly optimal risk</div>
+              <div class="mval color-purple" id="kelly-val">—</div>
+              <div class="msub" id="kelly-sub">—</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Profit factor</div>
+              <div class="mval" id="pf-val">—</div>
+              <div class="msub" id="pf-sub">—</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Expected attempts</div>
+              <div class="mval color-amber" id="attempts-val">—</div>
+              <div class="msub" id="attempts-sub">—</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Optimal risk %</div>
+              <div class="mval color-purple" id="optimal-risk-val">—</div>
+              <div class="msub" id="optimal-risk-sub">—</div>
+            </div>
+          </div>
+          <div id="economics-alert"></div>
+        </div>
+
+        <!-- ── Pass / bust / timeout ── -->
+        <div class="glass Challenge">
+          <div class="section-title">Pass / bust / timeout</div>
+          <div class="bar-label">
+            <span>Pass — hit profit target</span
+            ><span id="pass-bar-label">—</span>
+          </div>
+          <div class="bar-bg">
+            <div
+              class="bar-fill"
+              id="pass-bar"
+              style="background: #6ee7b7; width: 0%"
+            ></div>
+          </div>
+          <div class="bar-label">
+            <span>Bust — hit max drawdown</span
+            ><span id="bust-bar-label">—</span>
+          </div>
+          <div class="bar-bg">
+            <div
+              class="bar-fill"
+              id="bust-bar"
+              style="background: #fca5a5; width: 0%"
+            ></div>
+          </div>
+          <div id="timeout-row">
+            <div class="bar-label">
+              <span>Timeout — ran out of days</span
+              ><span id="time-bar-label">—</span>
+            </div>
+            <div class="bar-bg">
+              <div
+                class="bar-fill"
+                id="time-bar"
+                style="background: #fcd34d; width: 0%"
+              ></div>
+            </div>
+          </div>
+          <div id="alert-area"></div>
+        </div>
+
+        <!-- ── Streak scenarios ── -->
+        <div class="glass Streak">
+          <div class="section-title">Streak scenarios</div>
+          <div class="streak-note" id="streak-note"></div>
+          <div class="streak-grid" id="streak-grid"></div>
+        </div>
+      </div>
+      <!-- ── Position size chart ── -->
+      <div class="Chart-Container">
+        <div class="glass chart ChartCard">
+          <div class="section-title" id="chart-title">
+            Pass rate vs position size
+          </div>
+          <div class="legend-row">
+            <span
+              ><span class="legend-dot" style="background: #6ee7b7"></span>Pass
+              rate</span
+            >
+            <span
+              ><span
+                class="legend-dot"
+                style="
+                  background: #fca5a5;
+                  border: 1px dashed rgba(252, 165, 165, 0.5);
+                "
+              ></span
+              >Bust rate</span
+            >
+          </div>
+          <div class="chartbox">
+            <canvas
+              id="sizeChart"
+              role="img"
+              aria-label="Pass and bust rate vs position size"
+              >Pass and bust rates across position sizes.</canvas
+            >
+          </div>
+        </div>
+
+        <!-- ── Average passing path chart ── -->
+        <div class="glass chart ChartCard">
+          <div class="section-title">Average passing account — equity path</div>
+          <div class="path-meta" id="pass-path-meta">Calculating…</div>
+          <div class="legend-row">
+            <span
+              ><span class="legend-dot" style="background: #6ee7b7"></span>Avg
+              equity</span
+            >
+            <span
+              ><span
+                class="legend-dot"
+                style="
+                  background: rgba(110, 231, 183, 0.3);
+                  width: 14px;
+                  height: 6px;
+                  border-radius: 1px;
+                "
+              ></span
+              >Target</span
+            >
+            <span
+              ><span
+                class="legend-dot"
+                style="
+                  background: rgba(252, 165, 165, 0.4);
+                  width: 14px;
+                  height: 3px;
+                "
+              ></span
+              >Floor</span
+            >
+          </div>
+          <div class="chartbox" style="height: 240px">
+            <canvas
+              id="passPathChart"
+              role="img"
+              aria-label="Average equity path of passing accounts"
+              >Average equity path of accounts that passed.</canvas
+            >
+          </div>
+          <div class="path-stats grid3" id="pass-path-stats"></div>
+        </div>
+
+        <!-- ── Average failing path chart ── -->
+        <div class="glass ChartCard">
+          <div class="section-title">Average failing account — equity path</div>
+          <div class="path-meta" id="fail-path-meta">Calculating…</div>
+          <div class="legend-row">
+            <span
+              ><span class="legend-dot" style="background: #fca5a5"></span>Avg
+              equity</span
+            >
+            <span
+              ><span
+                class="legend-dot"
+                style="
+                  background: rgba(110, 231, 183, 0.3);
+                  width: 14px;
+                  height: 6px;
+                  border-radius: 1px;
+                "
+              ></span
+              >Target</span
+            >
+            <span
+              ><span
+                class="legend-dot"
+                style="
+                  background: rgba(252, 165, 165, 0.4);
+                  width: 14px;
+                  height: 3px;
+                "
+              ></span
+              >Floor</span
+            >
+          </div>
+          <div class="chartbox" style="height: 240px">
+            <canvas
+              id="failPathChart"
+              role="img"
+              aria-label="Average equity path of failing accounts"
+              >Average equity path of accounts that failed.</canvas
+            >
+          </div>
+          <div class="path-stats grid3" id="fail-path-stats"></div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <script src="simulator.js"></script>
+  </body>
+</html>
