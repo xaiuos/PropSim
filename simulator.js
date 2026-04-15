@@ -290,7 +290,7 @@ function update() {
     riskPctForMC,
     tpd,
     days,
-    3000,
+    20000,
     unlimited,
     eodTrailing,
     fixedRisk,
@@ -316,7 +316,7 @@ function update() {
   if (useDailyLimit) msubParts.push("daily limit on");
   document.getElementById("pass-msub").textContent = msubParts.length
     ? msubParts.join(" · ")
-    : "3000 MC paths";
+    : "20000 MC paths";
 
   document.getElementById("pass-bar-label").textContent =
     (res.passRate * 100).toFixed(1) + "%";
@@ -1044,10 +1044,67 @@ setupToggle(
   "color-red"
 );
 
+// bindSlider wires up a range input + its display span.
+// Clicking the span lets the user type a number directly.
+// On Enter or blur: value is parsed, clamped to the slider's min/max/step,
+// written back to the range, and update() fires.
 function bindSlider(id, outId, fmt) {
-  document.getElementById(id).addEventListener("input", function () {
-    document.getElementById(outId).textContent = fmt(this.value);
+  const slider = document.getElementById(id);
+  const label  = document.getElementById(outId);
+
+  // range → label (normal slider drag)
+  slider.addEventListener("input", function () {
+    label.textContent = fmt(this.value);
     update();
+  });
+
+  // label click → inline text input
+  label.style.cursor = "pointer";
+  label.title = "Click to type a value";
+
+  label.addEventListener("click", function () {
+    const min  = parseFloat(slider.min);
+    const max  = parseFloat(slider.max);
+    const step = parseFloat(slider.step) || 1;
+
+    const input = document.createElement("input");
+    input.type  = "text";
+    input.value = parseFloat(slider.value).toString();
+    input.className = "val-input";
+    input.style.width = label.offsetWidth + "px";
+
+    label.replaceWith(input);
+    input.select();
+
+    function commit() {
+      let num = parseFloat(input.value);
+      if (isNaN(num)) num = parseFloat(slider.value);
+
+      // clamp to slider bounds
+      num = Math.min(max, Math.max(min, num));
+
+      // snap to step
+      const steps = Math.round((num - min) / step);
+      num = parseFloat((min + steps * step).toFixed(10));
+      num = Math.min(max, Math.max(min, num));
+
+      slider.value = num;
+      label.textContent = fmt(num);
+      input.replaceWith(label);
+      update();
+    }
+
+    function cancel() {
+      label.textContent = fmt(slider.value);
+      input.replaceWith(label);
+    }
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter")  { e.preventDefault(); commit(); }
+      if (e.key === "Escape") { e.preventDefault(); cancel(); }
+    });
+
+    input.addEventListener("blur", commit);
   });
 }
 
