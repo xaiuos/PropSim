@@ -290,7 +290,7 @@ function update() {
     riskPctForMC,
     tpd,
     days,
-    20000,
+    7000,
     unlimited,
     eodTrailing,
     fixedRisk,
@@ -316,7 +316,7 @@ function update() {
   if (useDailyLimit) msubParts.push("daily limit on");
   document.getElementById("pass-msub").textContent = msubParts.length
     ? msubParts.join(" · ")
-    : "20000 MC paths";
+    : "7000 MC paths";
 
   document.getElementById("pass-bar-label").textContent =
     (res.passRate * 100).toFixed(1) + "%";
@@ -1050,7 +1050,7 @@ setupToggle(
 // written back to the range, and update() fires.
 function bindSlider(id, outId, fmt) {
   const slider = document.getElementById(id);
-  const label  = document.getElementById(outId);
+  const label = document.getElementById(outId);
 
   // range → label (normal slider drag)
   slider.addEventListener("input", function () {
@@ -1063,12 +1063,12 @@ function bindSlider(id, outId, fmt) {
   label.title = "Click to type a value";
 
   label.addEventListener("click", function () {
-    const min  = parseFloat(slider.min);
-    const max  = parseFloat(slider.max);
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
     const step = parseFloat(slider.step) || 1;
 
     const input = document.createElement("input");
-    input.type  = "text";
+    input.type = "text";
     input.value = parseFloat(slider.value).toString();
     input.className = "val-input";
     input.style.width = label.offsetWidth + "px";
@@ -1100,8 +1100,14 @@ function bindSlider(id, outId, fmt) {
     }
 
     input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter")  { e.preventDefault(); commit(); }
-      if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancel();
+      }
     });
 
     input.addEventListener("blur", commit);
