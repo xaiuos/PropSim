@@ -573,6 +573,18 @@ function update() {
     dailyLimitAmt
   );
 
+  calculateFundedEconomics(
+    res.passRate,
+    challengeFee,
+    wr,
+    rr,
+    riskPctForMC,
+    tpd,
+    eodTrailing,
+    fixedRisk,
+    fixedRiskAmt
+  );
+
   clearTimeout(pathTimer);
   pathTimer = setTimeout(() => {
     updatePathCharts(
@@ -592,6 +604,142 @@ function update() {
       dailyLimitAmt
     );
   }, 400);
+}
+
+
+// Runs a funded-phase Monte Carlo using the same strategy params (WR, RR, risk)
+// but with the funded account's size, TP and DD.
+// Funded accounts have no day cap — they run until TP or DD is hit.
+// Drawdown type (EOD vs static) matches whatever the user has selected for the eval.
+function fundedMonteCarlo(fundedAcct, fundedTp, fundedDd, wr, rr, riskPct, tpd, sims, eodTrailing, fixedRisk, fixedRiskAmt) {
+  const upper = fundedAcct * (1 + fundedTp / 100);
+  const ddDollar = fundedAcct * fundedDd / 100;
+  let paid = 0;
+  let busted = 0;
+
+  for (let s = 0; s < sims; s++) {
+    let eq = fundedAcct;
+    let lower = fundedAcct - ddDollar;
+    let eodPeak = fundedAcct;
+    let t = 0;
+
+    while (true) {
+      const loss = fixedRisk ? fixedRiskAmt : eq * riskPct / 100;
+      const win  = fixedRisk ? fixedRiskAmt * rr : eq * riskPct / 100 * rr;
+      eq += Math.random() < wr ? win : -loss;
+      t++;
+
+      if (eodTrailing && t % tpd === 0 && eq > eodPeak) {
+        eodPeak = eq;
+        lower = eodPeak - ddDollar;
+      }
+
+      if (eq >= upper) { paid++;   break; }
+      if (eq <= lower) { busted++; break; }
+
+      // safety cap — 200k trades prevents infinite loop on edge cases
+      if (t >= 200000) { busted++; break; }
+    }
+  }
+
+  return { payoutRate: paid / sims, bustRate: busted / sims };
+}
+
+// Reads the funded-phase inputs and computes expected profit/loss across the full cycle.
+// Full cycle = pay challenge fee → (maybe pass eval) → (maybe get funded payout)
+//
+// Math:
+//   P_pass     = eval pass rate (from main MC)
+//   P_payout   = P(hitting funded TP before funded DD) (from fundedMonteCarlo)
+//   payout_amt = fundedAcct × fundedTp% × payoutSplit%
+//
+//   Per attempt EV:
+//     gross  = P_pass × P_payout × payout_amt
+//     cost   = challengeFee + P_pass × activationFee
+//     net EV = gross - cost
+function calculateFundedEconomics(passRate, evalChallengeFee, wr, rr, riskPctForMC, tpd, eodTrailing, fixedRisk, fixedRiskAmt) {
+  const fundedAcct    = +document.getElementById('funded-acct').value;
+  const activationFee = +document.getElementById('activation-fee').value;
+  const payoutSplit   = +document.getElementById('payout-split').value / 100;
+  const fundedTp      = +document.getElementById('funded-tp').value;
+  const fundedDd      = +document.getElementById('funded-dd').value;
+
+  const { payoutRate } = fundedMonteCarlo(
+    fundedAcct, fundedTp, fundedDd,
+    wr, rr, riskPctForMC, tpd,
+    3000,
+    eodTrailing, fixedRisk, fixedRiskAmt
+  );
+
+  const payoutAmt   = fundedAcct * (fundedTp / 100) * payoutSplit;
+  const fullCycleP  = passRate * payoutRate;
+  const grossPerAttempt = passRate * payoutRate * payoutAmt;
+  const costPerAttempt  = evalChallengeFee + passRate * activationFee;
+  const netEV           = grossPerAttempt - costPerAttempt;
+
+  // Expected fees until you get a funded account (geometric: 1/passRate attempts)
+  const avgAttemptsToFund = passRate > 0 ? 1 / passRate : Infinity;
+  const avgCostToFund     = passRate > 0 ? (evalChallengeFee / passRate) + activationFee : Infinity;
+
+  // Breakeven: how many attempts until cumulative EV crosses zero?
+  // net × N >= 0  →  only valid if netEV > 0
+  const breakevenAttempts = netEV > 0 ? Math.ceil(costPerAttempt / (netEV)) : null;
+
+  // ── Write to DOM ──────────────────────────────────────────────────────────
+
+  document.getElementById('f-pass-eval').textContent = (passRate * 100).toFixed(1) + '%';
+  document.getElementById('f-pass-eval').className = 'mval ' + (passRate > 0.4 ? 'color-green' : passRate > 0.2 ? 'color-amber' : 'color-red');
+
+  document.getElementById('f-payout-prob').textContent = (payoutRate * 100).toFixed(1) + '%';
+  document.getElementById('f-full-prob').textContent   = (fullCycleP * 100).toFixed(1) + '%';
+  document.getElementById('f-full-prob').className     = 'mval ' + (fullCycleP > 0.3 ? 'color-green' : fullCycleP > 0.1 ? 'color-purple' : 'color-red');
+
+  document.getElementById('f-payout-amt').textContent = '$' + Math.round(payoutAmt).toLocaleString();
+  document.getElementById('f-payout-amt-sub').textContent =
+    (payoutSplit * 100).toFixed(0) + '% of $' + Math.round(fundedAcct * fundedTp / 100).toLocaleString() + ' profit';
+
+  document.getElementById('f-cost-to-fund').textContent = passRate > 0
+    ? '$' + Math.round(avgCostToFund).toLocaleString()
+    : '∞';
+  document.getElementById('f-cost-sub').textContent = passRate > 0
+    ? Math.ceil(avgAttemptsToFund) + ' avg attempts × $' + evalChallengeFee + (activationFee > 0 ? ' + $' + activationFee + ' activation' : '')
+    : 'pass rate is 0%';
+
+  document.getElementById('f-gross-payout').textContent = '$' + Math.round(grossPerAttempt).toLocaleString();
+
+  const netEl = document.getElementById('f-net-profit');
+  netEl.textContent = (netEV >= 0 ? '+' : '-') + '$' + Math.abs(Math.round(netEV)).toLocaleString();
+  netEl.className   = 'mval ' + (netEV >= 0 ? 'color-green' : 'color-red');
+
+  const beEl  = document.getElementById('f-breakeven');
+  const beSub = document.getElementById('f-breakeven-sub');
+  if (netEV > 0) {
+    beEl.textContent = '1';  // already positive per attempt
+    beSub.textContent = 'positive EV from attempt 1';
+    beEl.className = 'mval color-green';
+  } else if (netEV === 0) {
+    beEl.textContent = '∞';
+    beSub.textContent = 'zero EV — no profit ever';
+    beEl.className = 'mval color-amber';
+  } else {
+    beEl.textContent = '∞';
+    beSub.textContent = 'negative EV — no breakeven';
+    beEl.className = 'mval color-red';
+  }
+
+  // Alert
+  const fa = document.getElementById('funded-alert');
+  fa.innerHTML = '';
+
+  if (passRate === 0) {
+    fa.innerHTML = '<div class="alert-box alert-warn">Pass rate is 0% — you will never get funded with these parameters.</div>';
+  } else if (payoutRate < 0.1) {
+    fa.innerHTML = '<div class="alert-box alert-warn">Funded payout probability is very low (' + (payoutRate * 100).toFixed(1) + '%). The funded account DD/TP ratio is too tight for your strategy — consider reducing funded risk per trade or raising the funded TP/DD ratio.</div>';
+  } else if (netEV >= 0) {
+    fa.innerHTML = '<div class="alert-box alert-good">Positive expected profit: +$' + Math.round(netEV).toLocaleString() + ' per challenge attempt. Full cycle success chance: ' + (fullCycleP * 100).toFixed(1) + '%.</div>';
+  } else {
+    fa.innerHTML = '<div class="alert-box alert-warn">Negative expected profit: -$' + Math.abs(Math.round(netEV)).toLocaleString() + ' per attempt. To turn positive: raise win rate, raise payout split, or lower challenge fee.</div>';
+  }
 }
 
 let storedPassPaths = [];
@@ -1144,5 +1292,10 @@ bindSlider(
   "challenge-fee-out",
   (v) => "$" + Number(v).toLocaleString()
 );
+bindSlider("funded-acct",     "funded-acct-out",     (v) => "$" + Number(v).toLocaleString());
+bindSlider("activation-fee",  "activation-fee-out",  (v) => "$" + Number(v).toLocaleString());
+bindSlider("payout-split",    "payout-split-out",    (v) => v + "%");
+bindSlider("funded-tp",       "funded-tp-out",       (v) => parseFloat(v).toFixed(1) + "%");
+bindSlider("funded-dd",       "funded-dd-out",       (v) => parseFloat(v).toFixed(1) + "%");
 
 update();

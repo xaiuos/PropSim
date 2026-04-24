@@ -156,6 +156,117 @@
             <span class="val" id="days-out">30</span>
           </div>
         </div>
+        <div class="glass funded-card">
+          <div class="section-title">Funded account — expected profit</div>
+
+          <div class="slider-row">
+            <label>Funded acct size ($)</label>
+            <input
+              type="range"
+              id="funded-acct"
+              min="10000"
+              max="300000"
+              step="5000"
+              value="25000"
+            />
+            <span class="val" id="funded-acct-out">$25,000</span>
+          </div>
+          <div class="slider-row">
+            <label>Activation fee ($)</label>
+            <input
+              type="range"
+              id="activation-fee"
+              min="0"
+              max="600"
+              step="1"
+              value="0"
+            />
+            <span class="val" id="activation-fee-out">$0</span>
+          </div>
+          <div class="slider-row">
+            <label>Payout split (%)</label>
+            <input
+              type="range"
+              id="payout-split"
+              min="50"
+              max="100"
+              step="1"
+              value="100"
+            />
+            <span class="val" id="payout-split-out">100%</span>
+          </div>
+          <div class="slider-row">
+            <label>Funded profit target (%)</label>
+            <input
+              type="range"
+              id="funded-tp"
+              min="1"
+              max="20"
+              step="0.5"
+              value="5"
+            />
+            <span class="val" id="funded-tp-out">5%</span>
+          </div>
+          <div class="slider-row">
+            <label>Funded max drawdown (%)</label>
+            <input
+              type="range"
+              id="funded-dd"
+              min="1"
+              max="15"
+              step="0.5"
+              value="4"
+            />
+            <span class="val" id="funded-dd-out">4%</span>
+          </div>
+
+          <div class="funded-divider"></div>
+
+          <div class="Funded-Details">
+            <div class="metric">
+              <div class="mlabel">P(pass eval)</div>
+              <div class="mval" id="f-pass-eval">—</div>
+              <div class="msub">from simulator above</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">P(payout | funded)</div>
+              <div class="mval color-blue" id="f-payout-prob">—</div>
+              <div class="msub">hits funded TP before DD</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">P(full cycle win)</div>
+              <div class="mval color-purple" id="f-full-prob">—</div>
+              <div class="msub">pass eval AND get payout</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Payout amount</div>
+              <div class="mval color-green" id="f-payout-amt">—</div>
+              <div class="msub" id="f-payout-amt-sub">your share at TP</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Avg cost to fund</div>
+              <div class="mval color-red" id="f-cost-to-fund">—</div>
+              <div class="msub" id="f-cost-sub">fees until funded</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Expected gross payout</div>
+              <div class="mval color-green" id="f-gross-payout">—</div>
+              <div class="msub">per challenge attempt</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Expected net profit</div>
+              <div class="mval" id="f-net-profit">—</div>
+              <div class="msub">per challenge attempt</div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Breakeven attempts</div>
+              <div class="mval color-amber" id="f-breakeven">—</div>
+              <div class="msub" id="f-breakeven-sub">to cover all fees</div>
+            </div>
+          </div>
+
+          <div id="funded-alert"></div>
+        </div>
       </div>
       <div class="Analytic-Container">
         <div class="glass Challenge">
