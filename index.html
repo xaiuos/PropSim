@@ -37,11 +37,12 @@
           <div class="option-row">
             <span class="option-label">Drawdown type</span>
             <div class="seg-ctrl" id="dd-type">
-              <button class="seg-btn active" data-val="static">Static</button>
-              <button class="seg-btn" data-val="eod">EOD trailing</button>
+              <button class="seg-btn" data-val="static">Static</button>
+              <button class="seg-btn active" data-val="eod">EOD trailing</button>
+              <button class="seg-btn" data-val="intraday">Intraday</button>
             </div>
             <span class="option-hint" id="dd-type-hint"
-              >Floor fixed from starting balance — never moves</span
+              >Floor rises to (peak EOD equity − DD$) — ratchets up as you profit</span
             >
           </div>
         </div>
@@ -75,14 +76,14 @@
           <div class="option-row">
             <span class="option-label">Risk mode</span>
             <div class="seg-ctrl" id="risk-mode">
-              <button class="seg-btn active" data-val="pct">% compound</button>
-              <button class="seg-btn" data-val="fixed">Fixed $</button>
+              <button class="seg-btn" data-val="pct">% compound</button>
+              <button class="seg-btn active" data-val="fixed">Fixed $</button>
             </div>
             <span class="option-hint" id="risk-mode-hint"
-              >Risk scales with current equity each trade</span
+              >Same dollar amount risked on every trade regardless of equity</span
             >
           </div>
-          <div class="slider-row" id="risk-pct-row">
+          <div class="slider-row hidden" id="risk-pct-row">
             <label>Risk per trade (%)</label>
             <input
               type="range"
@@ -94,7 +95,7 @@
             />
             <span class="val" id="risk-out">0.800%</span>
           </div>
-          <div class="slider-row hidden" id="risk-fixed-row">
+          <div class="slider-row" id="risk-fixed-row">
             <label>Risk per trade ($)</label>
             <input
               type="range"
@@ -104,7 +105,7 @@
               step="1"
               value="400"
             />
-            <span class="val" id="risk-fixed-out">$200</span>
+            <span class="val" id="risk-fixed-out">$400</span>
           </div>
           <div class="slider-row">
             <label>Trades per day</label>
@@ -136,14 +137,14 @@
 
           <div class="toggle-row">
             <label class="toggle">
-              <input type="checkbox" id="days-toggle" checked />
+              <input type="checkbox" id="days-toggle" />
               <div class="toggle-track"></div>
               <div class="toggle-thumb"></div>
             </label>
             <span>Max trading days limit</span>
-            <span class="toggle-status color-purple" id="days-status">ON</span>
+            <span class="toggle-status color-red" id="days-status">OFF</span>
           </div>
-          <div class="slider-row" id="days-row">
+          <div class="slider-row disabled" id="days-row">
             <label>Max trading days</label>
             <input
               type="range"
@@ -304,6 +305,14 @@
                 id="time-bar"
                 style="background: #fcd34d; width: 0%"
               ></div>
+            </div>
+          </div>
+          <div id="funded-payout-row">
+            <div class="bar-label">
+              <span>Funded payout — full cycle win</span><span id="funded-payout-bar-label">—</span>
+            </div>
+            <div class="bar-bg">
+              <div class="bar-fill" id="funded-payout-bar" style="background: #c4b5fd; width: 0%"></div>
             </div>
           </div>
           <div id="alert-area"></div>
